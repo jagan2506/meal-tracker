@@ -123,7 +123,8 @@
         <div id="reports" class="tab-content">
             <h2>Attendance Reports</h2>
             <div id="reportData"></div>
-            <button class="btn btn-success" onclick="exportExcel()" style="margin:20px 0;">📥 Export to Excel</button>
+           <button class="btn btn-success" onclick="exportExcel()" style="margin:20px 0;">📥 Export to Excel</button>
+
         </div>
     </div>
     <div id="voiceFeedback" class="voice-feedback" style="display:none;"></div>
@@ -362,32 +363,39 @@ reportDiv.innerHTML = Object.entries(attendanceByDate)
     }
 
     async function exportExcel() {
-    const wb = XLSX.utils.book_new();
-    const wsData = [['Name', 'ID', 'Class', 'Date', 'Time', 'Status']];
+    try {
+        const wb = XLSX.utils.book_new();
+        const wsData = [['Name', 'ID', 'Class', 'Date', 'Time', 'Status']];
 
-    // Read all attendance records from Firestore
-    const snapshot = await db.collection('attendance')
-        .orderBy('date')
-        .orderBy('time')
-        .limit(3)
-        .get();
+        // Last 3 attendance records from Firestore
+        const snapshot = await db.collection('attendance')
+            .orderBy('date', 'desc')
+            .orderBy('time', 'desc')
+            .limit(3)
+            .get();
 
-    snapshot.docs.forEach(doc => {
-        const s = doc.data();
-        wsData.push([
-            s.name || '',
-            s.id || '',
-            s.class || '',
-            s.date || '',
-            s.time || '',
-            s.status || ''
-        ]);
-    });
+        snapshot.docs.forEach(doc => {
+            const s = doc.data();
+            wsData.push([
+                s.name || '',
+                s.id || '',
+                s.class || '',
+                s.date || '',
+                s.time || '',
+                s.status || ''
+            ]);
+        });
 
-    const ws = XLSX.utils.aoa_to_sheet(wsData);
-    XLSX.utils.book_append_sheet(wb, ws, 'Meal Attendance');
-    XLSX.writeFile(wb, `meal_attendance_${currentDate}.xlsx`);
-    speak('Excel report downloaded successfully');
+        const ws = XLSX.utils.aoa_to_sheet(wsData);
+        XLSX.utils.book_append_sheet(wb, ws, 'Meal Attendance');
+
+        // trigger download
+        XLSX.writeFile(wb, `meal_attendance_${currentDate}.xlsx`);
+        speak('Excel report downloaded successfully');
+    } catch (e) {
+        console.error("Export error:", e);
+        alert("Export error: " + e.message);
+    }
 }
 
 
