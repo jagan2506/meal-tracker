@@ -65,7 +65,7 @@
             <button class="tab" onclick="switchTab('reports')">📊 Reports</button>
         </div>
 
-        <!-- ADMIN PANEL -->
+       
         <div id="admin" class="tab-content active">
             <h2>Generate Student QR Codes</h2>
             <div class="form-group">
@@ -89,9 +89,7 @@
             </div>
         </div>
 
-        <!-- QR SCANNER -->
-        <!-- QR SCANNER -->
-<!-- QR SCANNER -->
+        
 <div id="scanner-tab" class="tab-content">
     <h2>Scan Student QR for Meal Attendance</h2>
     <div id="scanner-container" style="text-align:center; padding:20px;">
@@ -99,7 +97,7 @@
         <button class="btn" onclick="startScanner()">🚀 Start Scanner</button>
     </div>
 
-    <!-- Popup overlay for camera -->
+   
     <div id="scannerPopup" style="display:none;
         position: fixed;
         inset: 0;
@@ -124,7 +122,7 @@
 </div>
 
 
-        <!-- REPORTS -->
+      
         <div id="reports" class="tab-content">
             <h2>Attendance Reports</h2>
             <div id="reportData"></div>
@@ -135,7 +133,7 @@
     <div id="voiceFeedback" class="voice-feedback" style="display:none;"></div>
 
    <script>
-    // Firebase Config
+
     const firebaseConfig = {
         apiKey: "AIzaSyDg3helshzE7cWYepCtAXRovRiSolIQaWY",
         authDomain: "meal-tracker-7785a.firebaseapp.com",
@@ -151,7 +149,7 @@
     let currentDate = new Date().toISOString().split('T')[0];
     let scannedStudents = [];
 
-    // Tab Switching
+    
     function switchTab(tabName) {
         document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
         document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
@@ -161,7 +159,7 @@
         if (tabName === 'reports') loadReports();
     }
 
-    // Generate QR Code (using QRCode.toCanvas on your <canvas>)
+   
     function generateQR() {
     alert("Generate QR clicked");
     const name = document.getElementById('studentName').value.trim();
@@ -178,7 +176,7 @@
     const qrContainer = document.getElementById('qrContainer');
     const qrInfo = document.getElementById('qrInfo');
 
-    // Clear old QR
+   
     const qrDiv = document.getElementById('qrCode');
     qrDiv.innerHTML = "";
 
@@ -199,9 +197,9 @@
 }
 
 
-    // Download QR
+   
     function downloadQR() {
-    // Try to get the generated <img> inside qrCode div
+   
     const img = document.querySelector('#qrCode img') || document.querySelector('#qrCode canvas');
 
     if (!img) {
@@ -209,11 +207,11 @@
         return;
     }
 
-    // Create a temporary link for the image only
+    
     const link = document.createElement('a');
     link.download = 'student-qr.png';
 
-    // If it's an <img>, use its src; if it's a <canvas>, convert to data URL
+ 
     if (img.tagName.toLowerCase() === 'img') {
         link.href = img.src;
     } else {
@@ -243,7 +241,7 @@ async function startScanner() {
         video.setAttribute("playsinline", true);
         await video.play();
 
-        // show centered popup
+   
         popup.style.display = 'flex';
 
         requestAnimationFrame(tickScan);
@@ -265,7 +263,7 @@ function stopScanner() {
 
 function tickScan() {
     const video = document.getElementById('scannerVideo');
-    if (!videoStream) return; // scanner stopped
+    if (!videoStream) return; 
 
     if (video.readyState !== video.HAVE_ENOUGH_DATA) {
         requestAnimationFrame(tickScan);
@@ -288,7 +286,7 @@ function tickScan() {
         } catch (e) {
             showScanResult('❌ Invalid QR Code', 'error');
         }
-        stopScanner(); // close popup after a successful scan
+        stopScanner();
     } else {
         requestAnimationFrame(tickScan);
     }
@@ -314,7 +312,7 @@ function tickScan() {
 showScanResult(`✅ ${student.name} marked present at ${new Date().toLocaleTimeString('en-IN')}`, 'success');
 speak(`Attendance recorded for ${student.name}.`);
 
-// keep only last 5 and render names
+
 if (scannedStudents.length > 5) {
     scannedStudents = scannedStudents.slice(scannedStudents.length - 5);
 }
@@ -383,14 +381,14 @@ reportDiv.innerHTML = Object.entries(attendanceByDate)
         const wb = XLSX.utils.book_new();
         const wsData = [['Name', 'ID', 'Class', 'Date', 'Time', 'Status']];
 
-        // Get up to last 20 attendance records
+        
         const snapshot = await db.collection('attendance')
             .orderBy('date', 'desc')
             .orderBy('time', 'desc')
             .limit(20)
             .get();
 
-        // Even if there are 0–20 docs, we still export whatever exists
+        
         snapshot.docs.forEach(doc => {
             const s = doc.data();
             wsData.push([
@@ -415,10 +413,10 @@ reportDiv.innerHTML = Object.entries(attendanceByDate)
 
 
 
-    // Voice Feedback
+   
    function speak(text) {
     const utterance = new SpeechSynthesisUtterance(text);
-    utterance.lang = 'en-IN';   // or 'en-US'
+    utterance.lang = 'en-IN';  
     utterance.rate = 0.95;
     speechSynthesis.speak(utterance);
 
@@ -429,7 +427,7 @@ reportDiv.innerHTML = Object.entries(attendanceByDate)
 }
 
 
-    // Auto-load scanner on mobile
+ 
     if (/Android|iPhone/i.test(navigator.userAgent)) {
         setTimeout(() => {
             if (document.visibilityState === 'visible') {
