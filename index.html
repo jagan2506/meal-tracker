@@ -4,8 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Rural School Meal Attendance Tracker</title>
-    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
-     <script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/minified/html5-qrcode.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.js"></script>
+
+    <script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/minified/html5-qrcode.min.js"></script>
 
     
     
@@ -104,212 +105,218 @@
     </div>
     <div id="voiceFeedback" class="voice-feedback" style="display:none;"></div>
 
-    <script>
-        // Firebase Config (Replace with your config)
-       const firebaseConfig = {
-       apiKey: "AIzaSyDg3helshzE7cWYepCtAXRovRiSolIQaWY",
-       authDomain: "meal-tracker-7785a.firebaseapp.com",
-       projectId: "meal-tracker-7785a",
-       storageBucket: "meal-tracker-7785a.firebasestorage.app",
-       messagingSenderId: "984838923056",
-       appId: "1:984838923056:web:2130d454dcab47be651ef5"
-       };
-        firebase.initializeApp(firebaseConfig);
-        const db = firebase.firestore();
+   <script>
+    // Firebase Config
+    const firebaseConfig = {
+        apiKey: "AIzaSyDg3helshzE7cWYepCtAXRovRiSolIQaWY",
+        authDomain: "meal-tracker-7785a.firebaseapp.com",
+        projectId: "meal-tracker-7785a",
+        storageBucket: "meal-tracker-7785a.firebasestorage.app",
+        messagingSenderId: "984838923056",
+        appId: "1:984838923056:web:2130d454dcab47be651ef5"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
 
-        let html5QrCode;
-        let currentDate = new Date().toISOString().split('T')[0];
-        let scannedStudents = [];
+    let html5QrCode;
+    let currentDate = new Date().toISOString().split('T')[0];
+    let scannedStudents = [];
 
-        // Tab Switching
-        function switchTab(tabName) {
-            document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
-            document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
-            document.getElementById(tabName).classList.add('active');
-            event.target.classList.add('active');
-            if (tabName === 'scanner') loadTodayAttendance();
-            if (tabName === 'reports') loadReports();
+    // Tab Switching
+    function switchTab(tabName) {
+        document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
+        document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
+        document.getElementById(tabName).classList.add('active');
+        event.target.classList.add('active');
+        if (tabName === 'scanner') loadTodayAttendance();
+        if (tabName === 'reports') loadReports();
+    }
+
+    // Generate QR Code (using QRCode.toCanvas on your <canvas>)
+    async function generateQR() {
+        alert("Generate QR clicked");
+        const name = document.getElementById('studentName').value.trim();
+        const id = document.getElementById('studentId').value.trim();
+        const cls = document.getElementById('studentClass').value.trim();
+
+        if (!name || !id) {
+            alert('Please enter student name and ID');
+            return;
         }
 
-        // Generate QR Code
-        async function generateQR() {
-            alert("Generate QR clicked");
-            const name = document.getElementById('studentName').value.trim();
-            const id = document.getElementById('studentId').value.trim();
-            const cls = document.getElementById('studentClass').value.trim();
+        const studentData = { name, id, class: cls || 'N/A', generated: new Date().toISOString() };
 
-            if (!name || !id) {
-                alert('Please enter student name and ID');
-                return;
-            }
+        const qrContainer = document.getElementById('qrContainer');
+        const qrCanvas = document.getElementById('qrCode');
+        const qrInfo = document.getElementById('qrInfo');
 
-            const studentData = { name, id, class: cls || 'N/A', generated: new Date().toISOString() };
-            
-            // Generate QR
-            const qrCanvas = document.getElementById('qrCode');
-            await QRCode.toCanvas(qrCanvas, JSON.stringify(studentData), { width: 200 });
-            
-            document.getElementById('qrInfo').innerHTML = `
-                <strong>${studentData.name}</strong><br>
-                ID: ${studentData.id} | Class: ${studentData.class}
+        // Clear old QR
+        const ctx = qrCanvas.getContext("2d");
+        ctx.clearRect(0, 0, qrCanvas.width, qrCanvas.height);
+
+        // Generate QR
+        await QRCode.toCanvas(qrCanvas, JSON.stringify(studentData), { width: 200 });
+
+        qrInfo.innerHTML = `
+            <strong>${studentData.name}</strong><br>
+            ID: ${studentData.id} | Class: ${studentData.class}
+        `;
+        qrContainer.style.display = 'block';
+
+        await db.collection('students').doc(studentData.id).set(studentData);
+        speak(`QR code generated for ${studentData.name}`);
+    }
+
+    // Download QR
+    function downloadQR() {
+        const canvas = document.getElementById('qrCode');
+        const link = document.createElement('a');
+        link.download = 'student-qr.png';
+        link.href = canvas.toDataURL();
+        link.click();
+    }
+
+    // Scanner Functions
+    async function startScanner() {
+        alert("Start Scanner clicked");
+        const scanner = document.getElementById('scanner');
+        html5QrCode = new Html5Qrcode("scanner-container");
+
+        const config = { fps: 10, qrbox: { width: 250, height: 250 } };
+        await html5QrCode.start(
+            { facingMode: "environment" },
+            config,
+            onScanSuccess,
+            onScanError
+        );
+
+        document.getElementById('scanStatus').innerHTML = '<p>📷 Scanning... Point camera at QR code</p>';
+        scanner.style.display = 'block';
+    }
+
+    function onScanSuccess(decodedText, decodedResult) {
+        try {
+            const student = JSON.parse(decodedText);
+            logAttendance(student);
+        } catch (e) {
+            showScanResult('❌ Invalid QR Code', 'error');
+        }
+    }
+
+    function onScanError() {
+        // Silent fail
+    }
+
+    async function logAttendance(student) {
+        const timestamp = new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' });
+        const attendance = {
+            name: student.name,
+            id: student.id,
+            class: student.class || 'N/A',
+            time: timestamp,
+            date: currentDate,
+            status: 'present'
+        };
+
+        await db.collection('attendance').doc(`${currentDate}_${student.id}`).set(attendance);
+
+        scannedStudents.push(attendance);
+        showScanResult(`✅ ${student.name} marked present at ${new Date().toLocaleTimeString('en-IN')}`, 'success');
+        speak(`Namaste! ${student.name} ji ka khana record ho gaya`);
+
+        html5QrCode.clear();
+        setTimeout(startScanner, 2000);
+    }
+
+    function showScanResult(message, type) {
+        const resultDiv = document.getElementById('scanResult');
+        resultDiv.innerHTML = message;
+        resultDiv.className = type === 'success' ? 'scan-result' : 'scan-result error';
+        resultDiv.style.display = 'block';
+        setTimeout(() => resultDiv.style.display = 'none', 5000);
+    }
+
+    async function loadTodayAttendance() {
+        const snapshot = await db.collection('attendance')
+            .where('date', '==', currentDate)
+            .orderBy('time', 'desc')
+            .limit(50).get();
+
+        const list = document.getElementById('todayAttendance');
+        list.innerHTML = snapshot.docs.map(doc => {
+            const data = doc.data();
+            return `
+                <div class="attendance-item">
+                    <span><strong>${data.name}</strong> (${data.class})</span>
+                    <span>${data.time}</span>
+                </div>
             `;
-            document.getElementById('qrContainer').style.display = 'block';
-            
-            // Save to Firebase
-            await db.collection('students').doc(studentData.id).set(studentData);
-            speak(`QR code generated for ${studentData.name}`);
-        }
+        }).join('');
+    }
 
-        // Download QR
-        function downloadQR() {
-            const canvas = document.getElementById('qrCode');
-            const link = document.createElement('a');
-            link.download = 'student-qr.png';
-            link.href = canvas.toDataURL();
-            link.click();
-        }
+    async function loadReports() {
+        const snapshot = await db.collection('attendance').get();
+        const reportDiv = document.getElementById('reportData');
+        const attendanceByDate = {};
 
-        // Scanner Functions
-        async function startScanner() {
-            alert("Start Scanner clicked");
-            const scanner = document.getElementById('scanner');
-            html5QrCode = new Html5Qrcode("scanner-container");
-            
-            const config = { fps: 10, qrbox: { width: 250, height: 250 } };
-            await html5QrCode.start(
-                { facingMode: "environment" },
-                config,
-                onScanSuccess,
-                onScanError
-            );
-            
-            document.getElementById('scanStatus').innerHTML = '<p>📷 Scanning... Point camera at QR code</p>';
-            scanner.style.display = 'block';
-        }
+        snapshot.docs.forEach(doc => {
+            const data = doc.data();
+            if (!attendanceByDate[data.date]) attendanceByDate[data.date] = [];
+            attendanceByDate[data.date].push(data);
+        });
 
-        function onScanSuccess(decodedText, decodedResult) {
-            try {
-                const student = JSON.parse(decodedText);
-                logAttendance(student);
-            } catch(e) {
-                showScanResult('❌ Invalid QR Code', 'error');
+        reportDiv.innerHTML = Object.entries(attendanceByDate)
+            .map(([date, students]) => `
+                <div style="margin:20px 0; padding:20px; background:#f8f9fa; border-radius:10px;">
+                    <h3>${date}: ${students.length} students attended</h3>
+                    <p>Missing: ${50 - students.length} students (target: 50)</p>
+                </div>
+            `).join('');
+    }
+
+    function exportExcel() {
+        const wb = XLSX.utils.book_new();
+        const wsData = [['Name', 'ID', 'Class', 'Date', 'Time', 'Status']];
+
+        scannedStudents.forEach(student => {
+            wsData.push([
+                student.name,
+                student.id,
+                student.class,
+                student.date,
+                student.time,
+                student.status
+            ]);
+        });
+
+        const ws = XLSX.utils.aoa_to_sheet(wsData);
+        XLSX.utils.book_append_sheet(wb, ws, 'Meal Attendance');
+        XLSX.writeFile(wb, `meal_attendance_${currentDate}.xlsx`);
+        speak('Excel report downloaded successfully');
+    }
+
+    // Voice Feedback
+    function speak(text) {
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.lang = 'hi-IN';
+        utterance.rate = 0.9;
+        speechSynthesis.speak(utterance);
+
+        const feedback = document.getElementById('voiceFeedback');
+        feedback.textContent = text;
+        feedback.style.display = 'block';
+        setTimeout(() => feedback.style.display = 'none', 3000);
+    }
+
+    // Auto-load scanner on mobile
+    if (/Android|iPhone/i.test(navigator.userAgent)) {
+        setTimeout(() => {
+            if (document.visibilityState === 'visible') {
+                switchTab('scanner');
             }
-        }
+        }, 1000);
+    }
+</script>
 
-        function onScanError() {
-            // Silent fail
-        }
-
-        async function logAttendance(student) {
-            const timestamp = new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' });
-            const attendance = {
-                name: student.name,
-                id: student.id,
-                class: student.class || 'N/A',
-                time: timestamp,
-                date: currentDate,
-                status: 'present'
-            };
-
-            // Save to Firebase
-            await db.collection('attendance').doc(`${currentDate}_${student.id}`).set(attendance);
-            
-            scannedStudents.push(attendance);
-            showScanResult(`✅ ${student.name} marked present at ${new Date().toLocaleTimeString('en-IN')}`, 'success');
-            speak(`Namaste! ${student.name} ji ka khana record ho gaya`);
-            
-            html5QrCode.clear();
-            setTimeout(startScanner, 2000);
-        }
-
-        function showScanResult(message, type) {
-            const resultDiv = document.getElementById('scanResult');
-            resultDiv.innerHTML = message;
-            resultDiv.className = type === 'success' ? 'scan-result' : 'scan-result error';
-            resultDiv.style.display = 'block';
-            setTimeout(() => resultDiv.style.display = 'none', 5000);
-        }
-
-        async function loadTodayAttendance() {
-            const snapshot = await db.collection('attendance')
-                .where('date', '==', currentDate)
-                .orderBy('time', 'desc')
-                .limit(50).get();
-            
-            const list = document.getElementById('todayAttendance');
-            list.innerHTML = snapshot.docs.map(doc => {
-                const data = doc.data();
-                return `
-                    <div class="attendance-item">
-                        <span><strong>${data.name}</strong> (${data.class})</span>
-                        <span>${data.time}</span>
-                    </div>
-                `;
-            }).join('');
-        }
-
-        async function loadReports() {
-            const snapshot = await db.collectionGroup('attendance').get();
-            const reportDiv = document.getElementById('reportData');
-            const attendanceByDate = {};
-            
-            snapshot.docs.forEach(doc => {
-                const data = doc.data();
-                if (!attendanceByDate[data.date]) attendanceByDate[data.date] = [];
-                attendanceByDate[data.date].push(data);
-            });
-
-            reportDiv.innerHTML = Object.entries(attendanceByDate)
-                .map(([date, students]) => `
-                    <div style="margin:20px 0; padding:20px; background:#f8f9fa; border-radius:10px;">
-                        <h3>${date}: ${students.length} students attended</h3>
-                        <p>Missing: ${50 - students.length} students (target: 50)</p>
-                    </div>
-                `).join('');
-        }
-
-        function exportExcel() {
-            const wb = XLSX.utils.book_new();
-            const wsData = [['Name', 'ID', 'Class', 'Date', 'Time', 'Status']];
-            
-            scannedStudents.forEach(student => {
-                wsData.push([
-                    student.name,
-                    student.id,
-                    student.class,
-                    student.date,
-                    student.time,
-                    student.status
-                ]);
-            });
-            
-            const ws = XLSX.utils.aoa_to_sheet(wsData);
-            XLSX.utils.book_append_sheet(wb, ws, 'Meal Attendance');
-            XLSX.writeFile(wb, `meal_attendance_${currentDate}.xlsx`);
-            speak('Excel report downloaded successfully');
-        }
-
-        // Voice Feedback (Hindi/English)
-        function speak(text) {
-            const utterance = new SpeechSynthesisUtterance(text);
-            utterance.lang = 'hi-IN';
-            utterance.rate = 0.9;
-            speechSynthesis.speak(utterance);
-            
-            const feedback = document.getElementById('voiceFeedback');
-            feedback.textContent = text;
-            feedback.style.display = 'block';
-            setTimeout(() => feedback.style.display = 'none', 3000);
-        }
-
-        // Auto-load scanner on mobile
-        if (/Android|iPhone/i.test(navigator.userAgent)) {
-            setTimeout(() => {
-                if (document.visibilityState === 'visible') {
-                    switchTab('scanner');
-                }
-            }, 1000);
-        }
-    </script>
 </body>
 </html>
