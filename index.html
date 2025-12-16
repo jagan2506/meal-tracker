@@ -199,7 +199,6 @@
 
    
     function downloadQR() {
-    
     const qrContainer = document.getElementById('qrCode');
     if (!qrContainer) {
         alert("QR container not found.");
@@ -214,22 +213,25 @@
         return;
     }
 
-   
-    const link = document.createElement('a');
-    link.download = 'student-qr.png';
-
+    let dataUrl;
     if (img) {
-      
-        link.href = img.src;
+        dataUrl = img.src;
     } else {
-        
-        link.href = canvas.toDataURL('image/png');
+        dataUrl = canvas.toDataURL('image/png');
     }
 
+    const fileName = 'student-qr.png';
+
+    const link = document.createElement('a');
+    link.href = dataUrl;
+    link.download = fileName;
+
+    
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
 }
+
 
 
 
