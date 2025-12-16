@@ -116,6 +116,11 @@
 
     <div id="scanResult" class="scan-result" style="display:none;"></div>
     <div id="todayAttendance" class="attendance-list"></div>
+    <div id="recentScans" class="attendance-list" style="margin-top:20px;">
+    <h3>Last 5 Scans</h3>
+    <ul id="recentScansList" style="list-style:none; padding-left:0; margin-top:10px;"></ul>
+</div>
+
 </div>
 
 
@@ -305,12 +310,23 @@ function tickScan() {
 
         await db.collection('attendance').doc(`${currentDate}_${student.id}`).set(attendance);
 
-        scannedStudents.push(attendance);
-        showScanResult(`✅ ${student.name} marked present at ${new Date().toLocaleTimeString('en-IN')}`, 'success');
-        speak(`Good afternoon! ${student.name} had his lunch`);
+      scannedStudents.push(attendance);
+showScanResult(`✅ ${student.name} marked present at ${new Date().toLocaleTimeString('en-IN')}`, 'success');
+speak(`Attendance recorded for ${student.name}.`);
 
-        html5QrCode.clear();
-        setTimeout(startScanner, 2000);
+// keep only last 5 and render names
+if (scannedStudents.length > 5) {
+    scannedStudents = scannedStudents.slice(scannedStudents.length - 5);
+}
+const recentList = document.getElementById('recentScansList');
+if (recentList) {
+    recentList.innerHTML = scannedStudents
+        .slice()
+        .reverse()
+        .map(s => `<li>${s.name}</li>`)
+        .join('');
+}
+
     }
 
     function showScanResult(message, type) {
@@ -367,13 +383,14 @@ reportDiv.innerHTML = Object.entries(attendanceByDate)
         const wb = XLSX.utils.book_new();
         const wsData = [['Name', 'ID', 'Class', 'Date', 'Time', 'Status']];
 
-        // Last 3 attendance records from Firestore
+        // Get up to last 20 attendance records
         const snapshot = await db.collection('attendance')
             .orderBy('date', 'desc')
             .orderBy('time', 'desc')
-            .limit(3)
+            .limit(20)
             .get();
 
+        // Even if there are 0–20 docs, we still export whatever exists
         snapshot.docs.forEach(doc => {
             const s = doc.data();
             wsData.push([
@@ -388,8 +405,6 @@ reportDiv.innerHTML = Object.entries(attendanceByDate)
 
         const ws = XLSX.utils.aoa_to_sheet(wsData);
         XLSX.utils.book_append_sheet(wb, ws, 'Meal Attendance');
-
-        // trigger download
         XLSX.writeFile(wb, `meal_attendance_${currentDate}.xlsx`);
         speak('Excel report downloaded successfully');
     } catch (e) {
@@ -397,6 +412,7 @@ reportDiv.innerHTML = Object.entries(attendanceByDate)
         alert("Export error: " + e.message);
     }
 }
+
 
 
     // Voice Feedback
