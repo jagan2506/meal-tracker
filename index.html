@@ -195,13 +195,30 @@
 
     // Download QR
     function downloadQR() {
-    const img = document.querySelector('#qrCode img');
-    if (!img) { alert("Generate QR first"); return; }
+    // Try to get the generated <img> inside qrCode div
+    const img = document.querySelector('#qrCode img') || document.querySelector('#qrCode canvas');
+
+    if (!img) {
+        alert("Please generate a QR code first.");
+        return;
+    }
+
+    // Create a temporary link for the image only
     const link = document.createElement('a');
     link.download = 'student-qr.png';
-    link.href = img.src;
+
+    // If it's an <img>, use its src; if it's a <canvas>, convert to data URL
+    if (img.tagName.toLowerCase() === 'img') {
+        link.href = img.src;
+    } else {
+        link.href = img.toDataURL('image/png');
+    }
+
+    document.body.appendChild(link);
     link.click();
+    document.body.removeChild(link);
 }
+
 
 let videoStream = null;
 
@@ -289,7 +306,7 @@ function tickScan() {
 
         scannedStudents.push(attendance);
         showScanResult(`✅ ${student.name} marked present at ${new Date().toLocaleTimeString('en-IN')}`, 'success');
-        speak(`Namaste! ${student.name} ji ka khana record ho gaya`);
+        speak(`Good afternoon! ${student.name} had his lunch`);
 
         html5QrCode.clear();
         setTimeout(startScanner, 2000);
@@ -349,6 +366,7 @@ function tickScan() {
     const snapshot = await db.collection('attendance')
         .orderBy('date')
         .orderBy('time')
+        .limit(3)
         .get();
 
     snapshot.docs.forEach(doc => {
