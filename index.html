@@ -184,12 +184,14 @@
 
 
     // Scanner Functions
-    async function startScanner() {
-        alert("Start Scanner clicked");
-        const scanner = document.getElementById('scanner');
-        html5QrCode = new Html5Qrcode("scanner-container");
+   async function startScanner() {
+    alert("Start Scanner clicked");
+    const scanner = document.getElementById('scanner');
+    html5QrCode = new Html5Qrcode("scanner-container");
 
-        const config = { fps: 10, qrbox: { width: 250, height: 250 } };
+    const config = { fps: 10, qrbox: { width: 250, height: 250 } };
+
+    try {
         await html5QrCode.start(
             { facingMode: "environment" },
             config,
@@ -197,9 +199,15 @@
             onScanError
         );
 
-        document.getElementById('scanStatus').innerHTML = '<p>📷 Scanning... Point camera at QR code</p>';
+        document.getElementById('scanStatus').innerHTML =
+            '<p>📷 Scanning... Point camera at QR code</p>';
         scanner.style.display = 'block';
+    } catch (e) {
+        console.error("Scanner error:", e);
+        alert("Camera error: " + e.name + " - " + e.message);
     }
+}
+
 
     function onScanSuccess(decodedText, decodedResult) {
         try {
