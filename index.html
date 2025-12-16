@@ -199,29 +199,38 @@
 
    
     function downloadQR() {
-   
-    const img = document.querySelector('#qrCode img') || document.querySelector('#qrCode canvas');
+    
+    const qrContainer = document.getElementById('qrCode');
+    if (!qrContainer) {
+        alert("QR container not found.");
+        return;
+    }
 
-    if (!img) {
+    const img = qrContainer.querySelector('img');
+    const canvas = qrContainer.querySelector('canvas');
+
+    if (!img && !canvas) {
         alert("Please generate a QR code first.");
         return;
     }
 
-    
+   
     const link = document.createElement('a');
     link.download = 'student-qr.png';
 
- 
-    if (img.tagName.toLowerCase() === 'img') {
+    if (img) {
+      
         link.href = img.src;
     } else {
-        link.href = img.toDataURL('image/png');
+        
+        link.href = canvas.toDataURL('image/png');
     }
 
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
 }
+
 
 
 let videoStream = null;
