@@ -4,7 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Rural School Meal Attendance Tracker</title>
-    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/qrcodejs/qrcode.min.js"></script>
+
 
     <script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/minified/html5-qrcode.min.js"></script>
 
@@ -76,7 +77,8 @@
             </div>
             <button class="btn" onclick="generateQR()">🎨 Generate QR Code</button>
             <div id="qrContainer" class="qr-container" style="display:none;">
-                <canvas id="qrCode"></canvas>
+                <div id="qrCode"></div>
+
                 <p id="qrInfo"></p>
                 <button class="btn btn-success" onclick="downloadQR()">⬇️ Download QR</button>
             </div>
@@ -133,48 +135,53 @@
     }
 
     // Generate QR Code (using QRCode.toCanvas on your <canvas>)
-    async function generateQR() {
-        alert("Generate QR clicked");
-        const name = document.getElementById('studentName').value.trim();
-        const id = document.getElementById('studentId').value.trim();
-        const cls = document.getElementById('studentClass').value.trim();
+    function generateQR() {
+    alert("Generate QR clicked");
+    const name = document.getElementById('studentName').value.trim();
+    const id = document.getElementById('studentId').value.trim();
+    const cls = document.getElementById('studentClass').value.trim();
 
-        if (!name || !id) {
-            alert('Please enter student name and ID');
-            return;
-        }
-
-        const studentData = { name, id, class: cls || 'N/A', generated: new Date().toISOString() };
-
-        const qrContainer = document.getElementById('qrContainer');
-        const qrCanvas = document.getElementById('qrCode');
-        const qrInfo = document.getElementById('qrInfo');
-
-        // Clear old QR
-        const ctx = qrCanvas.getContext("2d");
-        ctx.clearRect(0, 0, qrCanvas.width, qrCanvas.height);
-
-        // Generate QR
-        await QRCode.toCanvas(qrCanvas, JSON.stringify(studentData), { width: 200 });
-
-        qrInfo.innerHTML = `
-            <strong>${studentData.name}</strong><br>
-            ID: ${studentData.id} | Class: ${studentData.class}
-        `;
-        qrContainer.style.display = 'block';
-
-        await db.collection('students').doc(studentData.id).set(studentData);
-        speak(`QR code generated for ${studentData.name}`);
+    if (!name || !id) {
+        alert('Please enter student name and ID');
+        return;
     }
+
+    const studentData = { name, id, class: cls || 'N/A', generated: new Date().toISOString() };
+
+    const qrContainer = document.getElementById('qrContainer');
+    const qrInfo = document.getElementById('qrInfo');
+
+    // Clear old QR
+    const qrDiv = document.getElementById('qrCode');
+    qrDiv.innerHTML = "";
+
+    new QRCode("qrCode", {
+        text: JSON.stringify(studentData),
+        width: 200,
+        height: 200
+    });
+
+    qrInfo.innerHTML = `
+        <strong>${studentData.name}</strong><br>
+        ID: ${studentData.id} | Class: ${studentData.class}
+    `;
+    qrContainer.style.display = 'block';
+
+    db.collection('students').doc(studentData.id).set(studentData);
+    speak(`QR code generated for ${studentData.name}`);
+}
+
 
     // Download QR
     function downloadQR() {
-        const canvas = document.getElementById('qrCode');
-        const link = document.createElement('a');
-        link.download = 'student-qr.png';
-        link.href = canvas.toDataURL();
-        link.click();
-    }
+    const img = document.querySelector('#qrCode img');
+    if (!img) { alert("Generate QR first"); return; }
+    const link = document.createElement('a');
+    link.download = 'student-qr.png';
+    link.href = img.src;
+    link.click();
+}
+
 
     // Scanner Functions
     async function startScanner() {
