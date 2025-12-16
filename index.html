@@ -7,7 +7,8 @@
     <script src="https://cdn.jsdelivr.net/npm/qrcodejs/qrcode.min.js"></script>
 
 
-  <script src="https://unpkg.com/html5-qrcode@2.3.8/minified/html5-qrcode.min.js"></script>
+   <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
+
 
 
 
@@ -185,45 +186,66 @@
     link.click();
 }
 
+let videoStream = null;
 
-    // Scanner Functions
-   async function startScanner() {
+async function startScanner() {
     alert("Start Scanner clicked");
-    const scanner = document.getElementById('scanner');
-    html5QrCode = new Html5Qrcode("scanner-container");
 
-    const config = { fps: 10, qrbox: { width: 250, height: 250 } };
+    const video = document.getElementById('scanner');
+    const scanStatus = document.getElementById('scanStatus');
 
     try {
-        await html5QrCode.start(
-            { facingMode: "environment" },
-            config,
-            onScanSuccess,
-            onScanError
-        );
+        // ask for back camera
+        videoStream = await navigator.mediaDevices.getUserMedia({
+            video: { facingMode: "environment" }
+        });
 
-        document.getElementById('scanStatus').innerHTML =
-            '<p>📷 Scanning... Point camera at QR code</p>';
-        scanner.style.display = 'block';
+        video.srcObject = videoStream;
+        video.setAttribute("playsinline", true); // iOS
+        video.play();
+
+        scanStatus.innerHTML = '<p>📷 Scanning... Point camera at QR code</p>';
+        video.style.display = 'block';
+
+        requestAnimationFrame(tickScan);
     } catch (e) {
-        console.error("Scanner error:", e);
+        console.error("Camera error:", e);
         alert("Camera error: " + e.name + " - " + e.message);
     }
 }
 
+function tickScan() {
+    const video = document.getElementById('scanner');
+    if (video.readyState !== video.HAVE_ENOUGH_DATA) {
+        requestAnimationFrame(tickScan);
+        return;
+    }
 
-    function onScanSuccess(decodedText, decodedResult) {
+    const canvas = document.createElement('canvas');
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    const code = jsQR(imageData.data, canvas.width, canvas.height);
+
+    if (code) {
         try {
-            const student = JSON.parse(decodedText);
+            const student = JSON.parse(code.data);
             logAttendance(student);
         } catch (e) {
             showScanResult('❌ Invalid QR Code', 'error');
         }
-    }
 
-    function onScanError() {
-        // Silent fail
+        if (videoStream) {
+            videoStream.getTracks().forEach(t => t.stop());
+        }
+    } else {
+        requestAnimationFrame(tickScan);
     }
+}
+
 
     async function logAttendance(student) {
         const timestamp = new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' });
