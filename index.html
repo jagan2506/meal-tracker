@@ -91,15 +91,29 @@
 
         <!-- QR SCANNER -->
         <!-- QR SCANNER -->
+<!-- QR SCANNER -->
 <div id="scanner-tab" class="tab-content">
     <h2>Scan Student QR for Meal Attendance</h2>
-    <div id="scanner-container">
-        <video id="scannerVideo" style="display:none;"></video>
-        <div id="scanStatus" style="text-align:center; padding:20px;">
-            <p>👆 Tap "Start Scanner" to begin</p>
-            <button class="btn" onclick="startScanner()">🚀 Start Scanner</button>
+    <div id="scanner-container" style="text-align:center; padding:20px;">
+        <p>👆 Tap "Start Scanner" to begin</p>
+        <button class="btn" onclick="startScanner()">🚀 Start Scanner</button>
+    </div>
+
+    <!-- Popup overlay for camera -->
+    <div id="scannerPopup" style="display:none;
+        position: fixed;
+        inset: 0;
+        background: rgba(0,0,0,0.6);
+        z-index: 9999;
+        justify-content: center;
+        align-items: center;">
+        <div style="background:#fff; padding:16px; border-radius:12px; width:90%; max-width:340px; box-shadow:0 10px 30px rgba(0,0,0,0.35); text-align:center;">
+            <h3 style="margin-bottom:10px;">Scan QR Code</h3>
+            <video id="scannerVideo" style="width:100%; border-radius:10px; background:#000;"></video>
+            <button class="btn btn-danger" style="margin-top:12px;" onclick="stopScanner()">✖ Close</button>
         </div>
     </div>
+
     <div id="scanResult" class="scan-result" style="display:none;"></div>
     <div id="todayAttendance" class="attendance-list"></div>
 </div>
@@ -194,8 +208,8 @@ let videoStream = null;
 async function startScanner() {
     alert("Start Scanner clicked");
 
+    const popup = document.getElementById('scannerPopup');
     const video = document.getElementById('scannerVideo');
-    const scanStatus = document.getElementById('scanStatus');
 
     try {
         videoStream = await navigator.mediaDevices.getUserMedia({
@@ -206,8 +220,8 @@ async function startScanner() {
         video.setAttribute("playsinline", true);
         await video.play();
 
-        scanStatus.innerHTML = '<p>📷 Scanning... Point camera at QR code</p>';
-        video.style.display = 'block';
+        // show centered popup
+        popup.style.display = 'flex';
 
         requestAnimationFrame(tickScan);
     } catch (e) {
@@ -216,8 +230,20 @@ async function startScanner() {
     }
 }
 
+function stopScanner() {
+    const popup = document.getElementById('scannerPopup');
+    popup.style.display = 'none';
+
+    if (videoStream) {
+        videoStream.getTracks().forEach(t => t.stop());
+        videoStream = null;
+    }
+}
+
 function tickScan() {
     const video = document.getElementById('scannerVideo');
+    if (!videoStream) return; // scanner stopped
+
     if (video.readyState !== video.HAVE_ENOUGH_DATA) {
         requestAnimationFrame(tickScan);
         return;
@@ -239,14 +265,12 @@ function tickScan() {
         } catch (e) {
             showScanResult('❌ Invalid QR Code', 'error');
         }
-
-        if (videoStream) {
-            videoStream.getTracks().forEach(t => t.stop());
-        }
+        stopScanner(); // close popup after a successful scan
     } else {
         requestAnimationFrame(tickScan);
     }
 }
+
 
 
 
@@ -317,39 +341,48 @@ function tickScan() {
             `).join('');
     }
 
-    function exportExcel() {
-        const wb = XLSX.utils.book_new();
-        const wsData = [['Name', 'ID', 'Class', 'Date', 'Time', 'Status']];
+    async function exportExcel() {
+    const wb = XLSX.utils.book_new();
+    const wsData = [['Name', 'ID', 'Class', 'Date', 'Time', 'Status']];
 
-        scannedStudents.forEach(student => {
-            wsData.push([
-                student.name,
-                student.id,
-                student.class,
-                student.date,
-                student.time,
-                student.status
-            ]);
-        });
+    // Read all attendance records from Firestore
+    const snapshot = await db.collection('attendance')
+        .orderBy('date')
+        .orderBy('time')
+        .get();
 
-        const ws = XLSX.utils.aoa_to_sheet(wsData);
-        XLSX.utils.book_append_sheet(wb, ws, 'Meal Attendance');
-        XLSX.writeFile(wb, `meal_attendance_${currentDate}.xlsx`);
-        speak('Excel report downloaded successfully');
-    }
+    snapshot.docs.forEach(doc => {
+        const s = doc.data();
+        wsData.push([
+            s.name || '',
+            s.id || '',
+            s.class || '',
+            s.date || '',
+            s.time || '',
+            s.status || ''
+        ]);
+    });
+
+    const ws = XLSX.utils.aoa_to_sheet(wsData);
+    XLSX.utils.book_append_sheet(wb, ws, 'Meal Attendance');
+    XLSX.writeFile(wb, `meal_attendance_${currentDate}.xlsx`);
+    speak('Excel report downloaded successfully');
+}
+
 
     // Voice Feedback
-    function speak(text) {
-        const utterance = new SpeechSynthesisUtterance(text);
-        utterance.lang = 'hi-IN';
-        utterance.rate = 0.9;
-        speechSynthesis.speak(utterance);
+   function speak(text) {
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = 'en-IN';   // or 'en-US'
+    utterance.rate = 0.95;
+    speechSynthesis.speak(utterance);
 
-        const feedback = document.getElementById('voiceFeedback');
-        feedback.textContent = text;
-        feedback.style.display = 'block';
-        setTimeout(() => feedback.style.display = 'none', 3000);
-    }
+    const feedback = document.getElementById('voiceFeedback');
+    feedback.textContent = text;
+    feedback.style.display = 'block';
+    setTimeout(() => feedback.style.display = 'none', 3000);
+}
+
 
     // Auto-load scanner on mobile
     if (/Android|iPhone/i.test(navigator.userAgent)) {
