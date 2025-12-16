@@ -60,7 +60,8 @@
         
         <div class="tabs">
             <button class="tab active" onclick="switchTab('admin')">👨‍🏫 Admin Panel</button>
-            <button class="tab" onclick="switchTab('scanner')">📱 QR Scanner</button>
+           <button class="tab" onclick="switchTab('scanner-tab')">📱 QR Scanner</button>
+
             <button class="tab" onclick="switchTab('reports')">📊 Reports</button>
         </div>
 
@@ -89,18 +90,20 @@
         </div>
 
         <!-- QR SCANNER -->
-        <div id="scanner" class="tab-content">
-            <h2>Scan Student QR for Meal Attendance</h2>
-            <div id="scanner-container">
-                <video id="scanner" style="display:none;"></video>
-                <div id="scanStatus" style="text-align:center; padding:20px;">
-                    <p>👆 Tap "Start Scanner" to begin</p>
-                    <button class="btn" onclick="startScanner()">🚀 Start Scanner</button>
-                </div>
-            </div>
-            <div id="scanResult" class="scan-result" style="display:none;"></div>
-            <div id="todayAttendance" class="attendance-list"></div>
+        <!-- QR SCANNER -->
+<div id="scanner-tab" class="tab-content">
+    <h2>Scan Student QR for Meal Attendance</h2>
+    <div id="scanner-container">
+        <video id="scannerVideo" style="display:none;"></video>
+        <div id="scanStatus" style="text-align:center; padding:20px;">
+            <p>👆 Tap "Start Scanner" to begin</p>
+            <button class="btn" onclick="startScanner()">🚀 Start Scanner</button>
         </div>
+    </div>
+    <div id="scanResult" class="scan-result" style="display:none;"></div>
+    <div id="todayAttendance" class="attendance-list"></div>
+</div>
+
 
         <!-- REPORTS -->
         <div id="reports" class="tab-content">
@@ -191,18 +194,17 @@ let videoStream = null;
 async function startScanner() {
     alert("Start Scanner clicked");
 
-    const video = document.getElementById('scanner');
+    const video = document.getElementById('scannerVideo');
     const scanStatus = document.getElementById('scanStatus');
 
     try {
-        // ask for back camera
         videoStream = await navigator.mediaDevices.getUserMedia({
             video: { facingMode: "environment" }
         });
 
         video.srcObject = videoStream;
-        video.setAttribute("playsinline", true); // iOS
-        video.play();
+        video.setAttribute("playsinline", true);
+        await video.play();
 
         scanStatus.innerHTML = '<p>📷 Scanning... Point camera at QR code</p>';
         video.style.display = 'block';
@@ -215,7 +217,7 @@ async function startScanner() {
 }
 
 function tickScan() {
-    const video = document.getElementById('scanner');
+    const video = document.getElementById('scannerVideo');
     if (video.readyState !== video.HAVE_ENOUGH_DATA) {
         requestAnimationFrame(tickScan);
         return;
@@ -245,6 +247,7 @@ function tickScan() {
         requestAnimationFrame(tickScan);
     }
 }
+
 
 
     async function logAttendance(student) {
