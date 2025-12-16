@@ -349,13 +349,16 @@ function tickScan() {
             attendanceByDate[data.date].push(data);
         });
 
-        reportDiv.innerHTML = Object.entries(attendanceByDate)
-            .map(([date, students]) => `
-                <div style="margin:20px 0; padding:20px; background:#f8f9fa; border-radius:10px;">
-                    <h3>${date}: ${students.length} students attended</h3>
-                    <p>Missing: ${50 - students.length} students (target: 50)</p>
-                </div>
-            `).join('');
+        const TARGET_STUDENTS = 3;
+
+reportDiv.innerHTML = Object.entries(attendanceByDate)
+    .map(([date, students]) => `
+        <div style="margin:20px 0; padding:20px; background:#f8f9fa; border-radius:10px;">
+            <h3>${date}: ${students.length} students attended</h3>
+            <p>Missing: ${TARGET_STUDENTS - students.length} students (target: ${TARGET_STUDENTS})</p>
+        </div>
+    `).join('');
+
     }
 
     async function exportExcel() {
