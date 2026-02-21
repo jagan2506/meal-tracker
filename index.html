@@ -4,68 +4,190 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MID-DAY-MEAL-TRACK</title>
+
+    <!-- QR code generation -->
     <script src="https://cdn.jsdelivr.net/npm/qrcodejs/qrcode.min.js"></script>
-
-
-   <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
-
-
-
-
-
-    
-    
+    <!-- QR code scanning (jsQR) -->
+    <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
+    <!-- SheetJS for Excel export -->
     <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
-
-
+    <!-- Firebase (compat) -->
     <script src="https://www.gstatic.com/firebasejs/10.13.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.13.1/firebase-firestore-compat.js"></script>
+
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
         .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
         .header { text-align: center; color: white; margin-bottom: 30px; }
-        .tabs { display: flex; background: rgba(255,255,255,0.1); backdrop-filter: blur(10px); border-radius: 15px; padding: 5px; margin-bottom: 30px; }
-        .tab { flex: 1; padding: 15px; background: transparent; border: none; color: white; border-radius: 10px; cursor: pointer; font-size: 16px; font-weight: 600; transition: all 0.3s; }
-        .tab.active { background: white; color: #667eea; box-shadow: 0 8px 25px rgba(0,0,0,0.2); }
-        .tab-content { display: none; background: white; border-radius: 20px; padding: 30px; box-shadow: 0 20px 40px rgba(0,0,0,0.1); }
-        .tab-content.active { display: block; animation: slideIn 0.5s ease; }
-        @keyframes slideIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        .tabs {
+            display: flex;
+            background: rgba(255,255,255,0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 5px;
+            margin-bottom: 30px;
+        }
+        .tab {
+            flex: 1;
+            padding: 15px;
+            background: transparent;
+            border: none;
+            color: white;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+        .tab.active {
+            background: white;
+            color: #667eea;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.2);
+        }
+        .tab-content {
+            display: none;
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+        }
+        .tab-content.active {
+            display: block;
+            animation: slideIn 0.5s ease;
+        }
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
         .form-group { margin-bottom: 20px; }
-        label { display: block; margin-bottom: 8px; font-weight: 600; color: #333; }
-        input { width: 100%; padding: 15px; border: 2px solid #e1e5e9; border-radius: 10px; font-size: 16px; transition: border-color 0.3s; }
-        input:focus { outline: none; border-color: #667eea; box-shadow: 0 0 0 3px rgba(102,126,234,0.1); }
-        .btn { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 15px 30px; border: none; border-radius: 10px; font-size: 16px; font-weight: 600; cursor: pointer; transition: transform 0.3s; }
-        .btn:hover { transform: translateY(-2px); box-shadow: 0 10px 25px rgba(102,126,234,0.4); }
-        .btn-success { background: linear-gradient(135deg, #56ab2f 0%, #a8e6cf 100%); }
-        .btn-danger { background: linear-gradient(135deg, #ff416c 0%, #ff4b2b 100%); }
-        .qr-container { text-align: center; padding: 30px; background: #f8f9ff; border-radius: 15px; margin: 20px 0; }
-        #qrCode { width: 200px; height: 200px; margin: 20px auto; }
-        #scanner-container { position: relative; width: 100%; max-width: 400px; margin: 20px auto; }
-        #scanner { width: 100%; border-radius: 15px; }
-        .scan-result { background: #d4edda; border: 2px solid #c3e6cb; color: #155724; padding: 20px; border-radius: 10px; margin: 20px 0; text-align: center; animation: pulse 1s infinite; }
-        @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.02); } 100% { transform: scale(1); } }
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #333;
+        }
+        input {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #e1e5e9;
+            border-radius: 10px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+        input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102,126,234,0.1);
+        }
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px 30px;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.3s;
+        }
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(102,126,234,0.4);
+        }
+        .btn-success {
+            background: linear-gradient(135deg, #56ab2f 0%, #a8e6cf 100%);
+        }
+        .btn-danger {
+            background: linear-gradient(135deg, #ff416c 0%, #ff4b2b 100%);
+        }
+        .qr-container {
+            text-align: center;
+            padding: 30px;
+            background: #f8f9ff;
+            border-radius: 15px;
+            margin: 20px 0;
+        }
+        #qrCode {
+            width: 200px;
+            height: 200px;
+            margin: 20px auto;
+        }
+        #scanner-container {
+            position: relative;
+            width: 100%;
+            max-width: 400px;
+            margin: 20px auto;
+        }
+        #scanner {
+            width: 100%;
+            border-radius: 15px;
+        }
+        .scan-result {
+            background: #d4edda;
+            border: 2px solid #c3e6cb;
+            color: #155724;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+            text-align: center;
+            animation: pulse 1s infinite;
+        }
+        .scan-result.error {
+            background: #f8d7da;
+            border-color: #f5c6cb;
+            color: #721c24;
+        }
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.02); }
+            100% { transform: scale(1); }
+        }
         .attendance-list { max-height: 400px; overflow-y: auto; }
-        .attendance-item { display: flex; justify-content: space-between; padding: 15px; background: #f8f9fa; margin: 10px 0; border-radius: 10px; border-left: 5px solid #667eea; }
-        .voice-feedback { position: fixed; bottom: 20px; right: 20px; background: #28a745; color: white; padding: 15px; border-radius: 50px; font-size: 14px; box-shadow: 0 10px 30px rgba(40,167,69,0.4); }
-        @media (max-width: 768px) { .tabs { flex-direction: column; } .container { padding: 15px; } }
+        .attendance-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 15px;
+            background: #f8f9fa;
+            margin: 10px 0;
+            border-radius: 10px;
+            border-left: 5px solid #667eea;
+        }
+        .voice-feedback {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: #28a745;
+            color: white;
+            padding: 15px;
+            border-radius: 50px;
+            font-size: 14px;
+            box-shadow: 0 10px 30px rgba(40,167,69,0.4);
+        }
+        @media (max-width: 768px) {
+            .tabs { flex-direction: column; }
+            .container { padding: 15px; }
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
-            <h1>🍲  School Meal Tracker</h1>
+            <h1>🍲 School Meal Tracker</h1>
             <p>Prevent malnutrition with QR attendance</p>
         </div>
-        
-        <div class="tabs">
-            <button class="tab active" onclick="switchTab('admin')">👨‍🏫 Admin Panel</button>
-           <button class="tab" onclick="switchTab('scanner-tab')">📱 QR Scanner</button>
 
-            <button class="tab" onclick="switchTab('reports')">📊 Reports</button>
+        <div class="tabs">
+            <button class="tab active" onclick="switchTab(event, 'admin')">👨‍🏫 Admin Panel</button>
+            <button class="tab" onclick="switchTab(event, 'scanner-tab')">📱 QR Scanner</button>
+            <button class="tab" onclick="switchTab(event, 'reports')">📊 Reports</button>
         </div>
 
-       
+        <!-- ADMIN TAB -->
         <div id="admin" class="tab-content active">
             <h2>Generate Student QR Codes</h2>
             <div class="form-group">
@@ -83,370 +205,397 @@
             <button class="btn" onclick="generateQR()">🎨 Generate QR Code</button>
             <div id="qrContainer" class="qr-container" style="display:none;">
                 <div id="qrCode"></div>
-
                 <p id="qrInfo"></p>
                 <button class="btn btn-success" onclick="downloadQR()">⬇️ Download QR</button>
             </div>
         </div>
 
-        
-<div id="scanner-tab" class="tab-content">
-    <h2>Scan Student QR for Meal Attendance</h2>
-    <div id="scanner-container" style="text-align:center; padding:20px;">
-        <p>👆 Tap "Start Scanner" to begin</p>
-        <button class="btn" onclick="startScanner()">🚀 Start Scanner</button>
-    </div>
+        <!-- SCANNER TAB -->
+        <div id="scanner-tab" class="tab-content">
+            <h2>Scan Student QR for Meal Attendance</h2>
+            <div id="scanner-container" style="text-align:center; padding:20px;">
+                <p>👆 Tap "Start Scanner" to begin</p>
+                <button class="btn" onclick="startScanner()">🚀 Start Scanner</button>
+            </div>
 
-   
-    <div id="scannerPopup" style="display:none;
-        position: fixed;
-        inset: 0;
-        background: rgba(0,0,0,0.6);
-        z-index: 9999;
-        justify-content: center;
-        align-items: center;">
-        <div style="background:#fff; padding:16px; border-radius:12px; width:90%; max-width:340px; box-shadow:0 10px 30px rgba(0,0,0,0.35); text-align:center;">
-            <h3 style="margin-bottom:10px;">Scan QR Code</h3>
-            <video id="scannerVideo" style="width:100%; border-radius:10px; background:#000;"></video>
-            <button class="btn btn-danger" style="margin-top:12px;" onclick="stopScanner()">✖ Close</button>
+            <!-- Full-screen popup scanner -->
+            <div id="scannerPopup" style="display:none;
+                position: fixed;
+                inset: 0;
+                background: rgba(0,0,0,0.6);
+                z-index: 9999;
+                justify-content: center;
+                align-items: center;">
+                <div style="background:#fff; padding:16px; border-radius:12px; width:90%; max-width:340px; box-shadow:0 10px 30px rgba(0,0,0,0.35); text-align:center;">
+                    <h3 style="margin-bottom:10px;">Scan QR Code</h3>
+                    <video id="scannerVideo" style="width:100%; border-radius:10px; background:#000;"></video>
+                    <button class="btn btn-danger" style="margin-top:12px;" onclick="stopScanner()">✖ Close</button>
+                </div>
+            </div>
+
+            <div id="scanResult" class="scan-result" style="display:none;"></div>
+            <h3>Today’s Attendance</h3>
+            <div id="todayAttendance" class="attendance-list"></div>
+
+            <div id="recentScans" class="attendance-list" style="margin-top:20px;">
+                <h3>Last 5 Scans</h3>
+                <ul id="recentScansList" style="list-style:none; padding-left:0; margin-top:10px;"></ul>
+            </div>
         </div>
-    </div>
 
-    <div id="scanResult" class="scan-result" style="display:none;"></div>
-    <div id="todayAttendance" class="attendance-list"></div>
-    <div id="recentScans" class="attendance-list" style="margin-top:20px;">
-    <h3>Last 5 Scans</h3>
-    <ul id="recentScansList" style="list-style:none; padding-left:0; margin-top:10px;"></ul>
-</div>
-
-</div>
-
-
-      
+        <!-- REPORTS TAB -->
         <div id="reports" class="tab-content">
             <h2>Attendance Reports</h2>
             <div id="reportData"></div>
-           <button class="btn btn-success" onclick="exportExcel()" style="margin:20px 0;">📥 Export to Excel</button>
-
+            <button class="btn btn-success" onclick="exportExcel()" style="margin:20px 0;">📥 Export to Excel</button>
         </div>
     </div>
+
     <div id="voiceFeedback" class="voice-feedback" style="display:none;"></div>
 
-   <script>
-
-    const firebaseConfig = {
-        apiKey: "AIzaSyDg3helshzE7cWYepCtAXRovRiSolIQaWY",
-        authDomain: "meal-tracker-7785a.firebaseapp.com",
-        projectId: "meal-tracker-7785a",
-        storageBucket: "meal-tracker-7785a.firebasestorage.app",
-        messagingSenderId: "984838923056",
-        appId: "1:984838923056:web:2130d454dcab47be651ef5"
-    };
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.firestore();
-
-    let html5QrCode;
-    let currentDate = new Date().toISOString().split('T')[0];
-    let scannedStudents = [];
-
-    
-    function switchTab(tabName) {
-        document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
-        document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
-        document.getElementById(tabName).classList.add('active');
-        event.target.classList.add('active');
-        if (tabName === 'scanner') loadTodayAttendance();
-        if (tabName === 'reports') loadReports();
-    }
-
-   
-    function generateQR() {
-    alert("Generate QR clicked");
-    const name = document.getElementById('studentName').value.trim();
-    const id = document.getElementById('studentId').value.trim();
-    const cls = document.getElementById('studentClass').value.trim();
-
-    if (!name || !id) {
-        alert('Please enter student name and ID');
-        return;
-    }
-
-    const studentData = { name, id, class: cls || 'N/A', generated: new Date().toISOString() };
-
-    const qrContainer = document.getElementById('qrContainer');
-    const qrInfo = document.getElementById('qrInfo');
-
-   
-    const qrDiv = document.getElementById('qrCode');
-    qrDiv.innerHTML = "";
-
-    new QRCode("qrCode", {
-        text: JSON.stringify(studentData),
-        width: 200,
-        height: 200
-    });
-
-    qrInfo.innerHTML = `
-        <strong>${studentData.name}</strong><br>
-        ID: ${studentData.id} | Class: ${studentData.class}
-    `;
-    qrContainer.style.display = 'block';
-
-    db.collection('students').doc(studentData.id).set(studentData);
-    speak(`QR code generated for ${studentData.name}`);
-}
-
-
-   
-    function downloadQR() {
-    const qrContainer = document.getElementById('qrCode');
-    if (!qrContainer) {
-        alert("QR container not found.");
-        return;
-    }
-
-    const img = qrContainer.querySelector('img');
-    const canvas = qrContainer.querySelector('canvas');
-
-    if (!img && !canvas) {
-        alert("Please generate a QR code first.");
-        return;
-    }
-
-    let dataUrl;
-    if (img) {
-        dataUrl = img.src;
-    } else {
-        dataUrl = canvas.toDataURL('image/png');
-    }
-
-    const fileName = 'student-qr.png';
-
-    const link = document.createElement('a');
-    link.href = dataUrl;
-    link.download = fileName;
-
-    
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-}
-
-
-
-
-let videoStream = null;
-
-async function startScanner() {
-    alert("Start Scanner clicked");
-
-    const popup = document.getElementById('scannerPopup');
-    const video = document.getElementById('scannerVideo');
-
-    try {
-        videoStream = await navigator.mediaDevices.getUserMedia({
-            video: { facingMode: "environment" }
-        });
-
-        video.srcObject = videoStream;
-        video.setAttribute("playsinline", true);
-        await video.play();
-
-   
-        popup.style.display = 'flex';
-
-        requestAnimationFrame(tickScan);
-    } catch (e) {
-        console.error("Camera error:", e);
-        alert("Camera error: " + e.name + " - " + e.message);
-    }
-}
-
-function stopScanner() {
-    const popup = document.getElementById('scannerPopup');
-    popup.style.display = 'none';
-
-    if (videoStream) {
-        videoStream.getTracks().forEach(t => t.stop());
-        videoStream = null;
-    }
-}
-
-function tickScan() {
-    const video = document.getElementById('scannerVideo');
-    if (!videoStream) return; 
-
-    if (video.readyState !== video.HAVE_ENOUGH_DATA) {
-        requestAnimationFrame(tickScan);
-        return;
-    }
-
-    const canvas = document.createElement('canvas');
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
-    const ctx = canvas.getContext('2d');
-    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-
-    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-    const code = jsQR(imageData.data, canvas.width, canvas.height);
-
-    if (code) {
-        try {
-            const student = JSON.parse(code.data);
-            logAttendance(student);
-        } catch (e) {
-            showScanResult('❌ Invalid QR Code', 'error');
-        }
-        stopScanner();
-    } else {
-        requestAnimationFrame(tickScan);
-    }
-}
-
-
-
-
-    async function logAttendance(student) {
-        const timestamp = new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' });
-        const attendance = {
-            name: student.name,
-            id: student.id,
-            class: student.class || 'N/A',
-            time: timestamp,
-            date: currentDate,
-            status: 'present'
+    <script>
+        // ---------- Firebase Setup ----------
+        const firebaseConfig = {
+            apiKey: "AIzaSyDg3helshzE7cWYepCtAXRovRiSolIQaWY",
+            authDomain: "meal-tracker-7785a.firebaseapp.com",
+            projectId: "meal-tracker-7785a",
+            storageBucket: "meal-tracker-7785a.firebasestorage.app",
+            messagingSenderId: "984838923056",
+            appId: "1:984838923056:web:2130d454dcab47be651ef5"
         };
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
 
-        await db.collection('attendance').doc(`${currentDate}_${student.id}`).set(attendance);
-
-      scannedStudents.push(attendance);
-showScanResult(`✅ ${student.name} marked present at ${new Date().toLocaleTimeString('en-IN')}`, 'success');
-speak(`Attendance recorded for ${student.name}.`);
-
-
-if (scannedStudents.length > 5) {
-    scannedStudents = scannedStudents.slice(scannedStudents.length - 5);
-}
-const recentList = document.getElementById('recentScansList');
-if (recentList) {
-    recentList.innerHTML = scannedStudents
-        .slice()
-        .reverse()
-        .map(s => `<li>${s.name}</li>`)
-        .join('');
-}
-
-    }
-
-    function showScanResult(message, type) {
-        const resultDiv = document.getElementById('scanResult');
-        resultDiv.innerHTML = message;
-        resultDiv.className = type === 'success' ? 'scan-result' : 'scan-result error';
-        resultDiv.style.display = 'block';
-        setTimeout(() => resultDiv.style.display = 'none', 5000);
-    }
-
-    async function loadTodayAttendance() {
-        const snapshot = await db.collection('attendance')
-            .where('date', '==', currentDate)
-            .orderBy('time', 'desc')
-            .limit(50).get();
-
-        const list = document.getElementById('todayAttendance');
-        list.innerHTML = snapshot.docs.map(doc => {
-            const data = doc.data();
-            return `
-                <div class="attendance-item">
-                    <span><strong>${data.name}</strong> (${data.class})</span>
-                    <span>${data.time}</span>
-                </div>
-            `;
-        }).join('');
-    }
-
-    async function loadReports() {
-        const snapshot = await db.collection('attendance').get();
-        const reportDiv = document.getElementById('reportData');
-        const attendanceByDate = {};
-
-        snapshot.docs.forEach(doc => {
-            const data = doc.data();
-            if (!attendanceByDate[data.date]) attendanceByDate[data.date] = [];
-            attendanceByDate[data.date].push(data);
+        // Simple connection test document
+        db.collection("test").doc("connection").set({
+            status: "connected",
+            time: new Date().toISOString()
+        }).then(() => {
+            console.log("🔥 Firebase Connected Successfully");
+        }).catch((error) => {
+            console.error("❌ Firebase Connection Failed:", error);
         });
 
-        const TARGET_STUDENTS = 3;
+        // ---------- Global State ----------
+        let currentDate = new Date().toISOString().split('T')[0];
+        let scannedStudents = [];
+        let videoStream = null;
 
-reportDiv.innerHTML = Object.entries(attendanceByDate)
-    .map(([date, students]) => `
-        <div style="margin:20px 0; padding:20px; background:#f8f9fa; border-radius:10px;">
-            <h3>${date}: ${students.length} students attended</h3>
-            <p>Missing: ${TARGET_STUDENTS - students.length} students (target: ${TARGET_STUDENTS})</p>
-        </div>
-    `).join('');
+        // ---------- Tab Handling ----------
+        function switchTab(e, tabName) {
+            document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
+            document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
+            document.getElementById(tabName).classList.add('active');
+            e.target.classList.add('active');
 
-    }
+            if (tabName === 'scanner-tab') loadTodayAttendance();
+            if (tabName === 'reports') loadReports();
+        }
 
-    async function exportExcel() {
-    try {
-        const wb = XLSX.utils.book_new();
-        const wsData = [['Name', 'ID', 'Class', 'Date', 'Time', 'Status']];
+        // ---------- QR Generation ----------
+        function generateQR() {
+            const name = document.getElementById('studentName').value.trim();
+            const id = document.getElementById('studentId').value.trim();
+            const cls = document.getElementById('studentClass').value.trim();
 
-        
-        const snapshot = await db.collection('attendance')
-            .orderBy('date', 'desc')
-            .orderBy('time', 'desc')
-            .limit(20)
-            .get();
-
-        
-        snapshot.docs.forEach(doc => {
-            const s = doc.data();
-            wsData.push([
-                s.name || '',
-                s.id || '',
-                s.class || '',
-                s.date || '',
-                s.time || '',
-                s.status || ''
-            ]);
-        });
-
-        const ws = XLSX.utils.aoa_to_sheet(wsData);
-        XLSX.utils.book_append_sheet(wb, ws, 'Meal Attendance');
-        XLSX.writeFile(wb, `meal_attendance_${currentDate}.xlsx`);
-        speak('Excel report downloaded successfully');
-    } catch (e) {
-        console.error("Export error:", e);
-        alert("Export error: " + e.message);
-    }
-}
-
-
-
-   
-   function speak(text) {
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.lang = 'en-IN';  
-    utterance.rate = 0.95;
-    speechSynthesis.speak(utterance);
-
-    const feedback = document.getElementById('voiceFeedback');
-    feedback.textContent = text;
-    feedback.style.display = 'block';
-    setTimeout(() => feedback.style.display = 'none', 3000);
-}
-
-
- 
-    if (/Android|iPhone/i.test(navigator.userAgent)) {
-        setTimeout(() => {
-            if (document.visibilityState === 'visible') {
-                switchTab('scanner');
+            if (!name || !id) {
+                alert('Please enter student name and ID');
+                return;
             }
-        }, 1000);
-    }
-</script>
 
+            const studentData = {
+                name,
+                id,
+                class: cls || 'N/A',
+                generated: new Date().toISOString()
+            };
+
+            const qrContainer = document.getElementById('qrContainer');
+            const qrInfo = document.getElementById('qrInfo');
+            const qrDiv = document.getElementById('qrCode');
+
+            // Clear previous QR
+            qrDiv.innerHTML = "";
+
+            new QRCode("qrCode", {
+                text: JSON.stringify(studentData),
+                width: 200,
+                height: 200
+            });
+
+            qrInfo.innerHTML = `
+                <strong>${studentData.name}</strong><br>
+                ID: ${studentData.id} | Class: ${studentData.class}
+            `;
+            qrContainer.style.display = 'block';
+
+            // Save student to Firestore
+            db.collection('students').doc(studentData.id).set(studentData)
+                .then(() => {
+                    speak(`QR code generated for ${studentData.name}`);
+                })
+                .catch(err => {
+                    console.error("Student save error:", err);
+                    alert("Error saving student: " + err.message);
+                });
+        }
+
+        function downloadQR() {
+            const qrContainer = document.getElementById('qrCode');
+            if (!qrContainer) {
+                alert("QR container not found.");
+                return;
+            }
+
+            const img = qrContainer.querySelector('img');
+            const canvas = qrContainer.querySelector('canvas');
+
+            if (!img && !canvas) {
+                alert("Please generate a QR code first.");
+                return;
+            }
+
+            let dataUrl;
+            if (img) dataUrl = img.src;
+            else dataUrl = canvas.toDataURL('image/png');
+
+            const fileName = 'student-qr.png';
+            const link = document.createElement('a');
+            link.href = dataUrl;
+            link.download = fileName;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        // ---------- Scanner ----------
+        async function startScanner() {
+            const popup = document.getElementById('scannerPopup');
+            const video = document.getElementById('scannerVideo');
+
+            try {
+                videoStream = await navigator.mediaDevices.getUserMedia({
+                    video: { facingMode: "environment" }
+                });
+
+                video.srcObject = videoStream;
+                video.setAttribute("playsinline", true); // iOS compatibility
+                await video.play();
+
+                popup.style.display = 'flex';
+
+                requestAnimationFrame(tickScan);
+            } catch (e) {
+                console.error("Camera error:", e);
+                alert("Camera error: " + e.name + " - " + e.message);
+            }
+        }
+
+        function stopScanner() {
+            const popup = document.getElementById('scannerPopup');
+            popup.style.display = 'none';
+
+            if (videoStream) {
+                videoStream.getTracks().forEach(t => t.stop());
+                videoStream = null;
+            }
+        }
+
+        function tickScan() {
+            const video = document.getElementById('scannerVideo');
+            if (!videoStream) return;
+
+            if (video.readyState !== video.HAVE_ENOUGH_DATA) {
+                requestAnimationFrame(tickScan);
+                return;
+            }
+
+            const canvas = document.createElement('canvas');
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            const code = jsQR(imageData.data, canvas.width, canvas.height);
+
+            if (code) {
+                try {
+                    const student = JSON.parse(code.data);
+                    logAttendance(student);
+                } catch (e) {
+                    showScanResult('❌ Invalid QR Code', 'error');
+                }
+                stopScanner();
+            } else {
+                requestAnimationFrame(tickScan);
+            }
+        }
+
+        // ---------- Attendance Logging ----------
+        async function logAttendance(student) {
+            const timestamp = new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' });
+            const attendance = {
+                name: student.name,
+                id: student.id,
+                class: student.class || 'N/A',
+                time: timestamp,
+                date: currentDate,
+                status: 'present'
+            };
+
+            try {
+                await db.collection('attendance')
+                    .doc(`${currentDate}_${student.id}`)
+                    .set(attendance);
+
+                scannedStudents.push(attendance);
+                showScanResult(`✅ ${student.name} marked present at ${new Date().toLocaleTimeString('en-IN')}`, 'success');
+                speak(`Attendance recorded for ${student.name}.`);
+
+                if (scannedStudents.length > 5) {
+                    scannedStudents = scannedStudents.slice(scannedStudents.length - 5);
+                }
+                const recentList = document.getElementById('recentScansList');
+                if (recentList) {
+                    recentList.innerHTML = scannedStudents
+                        .slice()
+                        .reverse()
+                        .map(s => `<li>${s.name} (${s.class}) - ${s.time}</li>`)
+                        .join('');
+                }
+
+                // Refresh today's attendance list
+                loadTodayAttendance();
+            } catch (e) {
+                console.error("Attendance save error:", e);
+                alert("Error saving attendance: " + e.message);
+            }
+        }
+
+        function showScanResult(message, type) {
+            const resultDiv = document.getElementById('scanResult');
+            resultDiv.innerHTML = message;
+            resultDiv.className = type === 'success' ? 'scan-result' : 'scan-result error';
+            resultDiv.style.display = 'block';
+            setTimeout(() => resultDiv.style.display = 'none', 5000);
+        }
+
+        // ---------- Data Loading ----------
+        async function loadTodayAttendance() {
+            try {
+                const snapshot = await db.collection('attendance')
+                    .where('date', '==', currentDate)
+                    .orderBy('time', 'desc')
+                    .limit(50)
+                    .get();
+
+                const list = document.getElementById('todayAttendance');
+                list.innerHTML = snapshot.docs.map(doc => {
+                    const data = doc.data();
+                    return `
+                        <div class="attendance-item">
+                            <span><strong>${data.name}</strong> (${data.class})</span>
+                            <span>${data.time}</span>
+                        </div>
+                    `;
+                }).join('');
+            } catch (e) {
+                console.error("loadTodayAttendance error:", e);
+            }
+        }
+
+        async function loadReports() {
+            try {
+                const snapshot = await db.collection('attendance').get();
+                const reportDiv = document.getElementById('reportData');
+                const attendanceByDate = {};
+
+                snapshot.docs.forEach(doc => {
+                    const data = doc.data();
+                    if (!attendanceByDate[data.date]) attendanceByDate[data.date] = [];
+                    attendanceByDate[data.date].push(data);
+                });
+
+                const TARGET_STUDENTS = 3; // change this as needed
+
+                reportDiv.innerHTML = Object.entries(attendanceByDate)
+                    .map(([date, students]) => `
+                        <div style="margin:20px 0; padding:20px; background:#f8f9fa; border-radius:10px;">
+                            <h3>${date}: ${students.length} students attended</h3>
+                            <p>Missing: ${Math.max(TARGET_STUDENTS - students.length, 0)} students (target: ${TARGET_STUDENTS})</p>
+                        </div>
+                    `).join('');
+            } catch (e) {
+                console.error("loadReports error:", e);
+            }
+        }
+
+        // ---------- Excel Export ----------
+        async function exportExcel() {
+            try {
+                const wb = XLSX.utils.book_new();
+                const wsData = [['Name', 'ID', 'Class', 'Date', 'Time', 'Status']];
+
+                const snapshot = await db.collection('attendance')
+                    .orderBy('date', 'desc')
+                    .orderBy('time', 'desc')
+                    .limit(100)
+                    .get();
+
+                snapshot.docs.forEach(doc => {
+                    const s = doc.data();
+                    wsData.push([
+                        s.name || '',
+                        s.id || '',
+                        s.class || '',
+                        s.date || '',
+                        s.time || '',
+                        s.status || ''
+                    ]);
+                });
+
+                const ws = XLSX.utils.aoa_to_sheet(wsData);
+                XLSX.utils.book_append_sheet(wb, ws, 'Meal Attendance');
+                XLSX.writeFile(wb, `meal_attendance_${currentDate}.xlsx`);
+                speak('Excel report downloaded successfully');
+            } catch (e) {
+                console.error("Export error:", e);
+                alert("Export error: " + e.message);
+            }
+        }
+
+        // ---------- Voice Feedback ----------
+        function speak(text) {
+            try {
+                const utterance = new SpeechSynthesisUtterance(text);
+                utterance.lang = 'en-IN';
+                utterance.rate = 0.95;
+                window.speechSynthesis.speak(utterance);
+            } catch (e) {
+                console.warn("Speech synthesis not available:", e);
+            }
+
+            const feedback = document.getElementById('voiceFeedback');
+            feedback.textContent = text;
+            feedback.style.display = 'block';
+            setTimeout(() => feedback.style.display = 'none', 3000);
+        }
+
+        // ---------- Mobile Auto-switch to Scanner ----------
+        if (/Android|iPhone/i.test(navigator.userAgent)) {
+            setTimeout(() => {
+                if (document.visibilityState === 'visible') {
+                    // Directly activate scanner tab without relying on event
+                    document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+                    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                    document.getElementById('scanner-tab').classList.add('active');
+                    const scannerTabButton = document.querySelector('.tab[onclick*="scanner-tab"]');
+                    if (scannerTabButton) scannerTabButton.classList.add('active');
+                    loadTodayAttendance();
+                }
+            }, 1000);
+        }
+    </script>
 </body>
 </html>
