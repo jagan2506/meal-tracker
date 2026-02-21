@@ -7,11 +7,11 @@
 
     <!-- QR code generation -->
     <script src="https://cdn.jsdelivr.net/npm/qrcodejs/qrcode.min.js"></script>
-    <!-- QR code scanning -->
+    <!-- QR code scanning (jsQR) -->
     <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
     <!-- SheetJS for Excel export -->
     <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
-    <!-- Firebase (compat SDK) -->
+    <!-- Firebase (compat) -->
     <script src="https://www.gstatic.com/firebasejs/10.13.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.13.1/firebase-firestore-compat.js"></script>
 
@@ -123,6 +123,10 @@
             max-width: 400px;
             margin: 20px auto;
         }
+        #scanner {
+            width: 100%;
+            border-radius: 15px;
+        }
         .scan-result {
             background: #d4edda;
             border: 2px solid #c3e6cb;
@@ -214,6 +218,7 @@
                 <button class="btn" onclick="startScanner()">🚀 Start Scanner</button>
             </div>
 
+            <!-- Full-screen popup scanner -->
             <div id="scannerPopup" style="display:none;
                 position: fixed;
                 inset: 0;
@@ -261,6 +266,7 @@
         firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
 
+        // Simple connection test document
         db.collection("test").doc("connection").set({
             status: "connected",
             time: new Date().toISOString()
@@ -275,7 +281,7 @@
         let scannedStudents = [];
         let videoStream = null;
 
-        // ---------- Tabs ----------
+        // ---------- Tab Handling ----------
         function switchTab(e, tabName) {
             document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
             document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
@@ -307,6 +313,8 @@
             const qrContainer = document.getElementById('qrContainer');
             const qrInfo = document.getElementById('qrInfo');
             const qrDiv = document.getElementById('qrCode');
+
+            // Clear previous QR
             qrDiv.innerHTML = "";
 
             new QRCode("qrCode", {
@@ -321,6 +329,7 @@
             `;
             qrContainer.style.display = 'block';
 
+            // Save student to Firestore
             db.collection('students').doc(studentData.id).set(studentData)
                 .then(() => {
                     speak(`QR code generated for ${studentData.name}`);
@@ -346,11 +355,14 @@
                 return;
             }
 
-            let dataUrl = img ? img.src : canvas.toDataURL('image/png');
+            let dataUrl;
+            if (img) dataUrl = img.src;
+            else dataUrl = canvas.toDataURL('image/png');
 
+            const fileName = 'student-qr.png';
             const link = document.createElement('a');
             link.href = dataUrl;
-            link.download = 'student-qr.png';
+            link.download = fileName;
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
@@ -367,10 +379,11 @@
                 });
 
                 video.srcObject = videoStream;
-                video.setAttribute("playsinline", true);
+                video.setAttribute("playsinline", true); // iOS compatibility
                 await video.play();
 
                 popup.style.display = 'flex';
+
                 requestAnimationFrame(tickScan);
             } catch (e) {
                 console.error("Camera error:", e);
@@ -419,21 +432,14 @@
             }
         }
 
-        // ---------- Attendance ----------
+        // ---------- Attendance Logging ----------
         async function logAttendance(student) {
-            const now = new Date();
-            const timeOnly = now.toLocaleTimeString('en-IN', {
-                timeZone: 'Asia/Kolkata',
-                hour: '2-digit',
-                minute: '2-digit',
-                second: '2-digit'
-            });  // only time, no date [web:85][web:92]
-
+            const timestamp = new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' });
             const attendance = {
                 name: student.name,
                 id: student.id,
                 class: student.class || 'N/A',
-                time: timeOnly,
+                time: timestamp,
                 date: currentDate,
                 status: 'present'
             };
@@ -444,7 +450,7 @@
                     .set(attendance);
 
                 scannedStudents.push(attendance);
-                showScanResult(`✅ ${student.name} marked present at ${timeOnly}`, 'success');
+                showScanResult(`✅ ${student.name} marked present at ${new Date().toLocaleTimeString('en-IN')}`, 'success');
                 speak(`Attendance recorded for ${student.name}.`);
 
                 if (scannedStudents.length > 5) {
@@ -459,6 +465,7 @@
                         .join('');
                 }
 
+                // Refresh today's attendance list
                 loadTodayAttendance();
             } catch (e) {
                 console.error("Attendance save error:", e);
@@ -474,7 +481,7 @@
             setTimeout(() => resultDiv.style.display = 'none', 5000);
         }
 
-        // ---------- Load Data ----------
+        // ---------- Data Loading ----------
         async function loadTodayAttendance() {
             try {
                 const snapshot = await db.collection('attendance')
@@ -510,7 +517,7 @@
                     attendanceByDate[data.date].push(data);
                 });
 
-                const TARGET_STUDENTS = 3;
+                const TARGET_STUDENTS = 3; // change this as needed
 
                 reportDiv.innerHTML = Object.entries(attendanceByDate)
                     .map(([date, students]) => `
@@ -550,7 +557,7 @@
 
                 const ws = XLSX.utils.aoa_to_sheet(wsData);
                 XLSX.utils.book_append_sheet(wb, ws, 'Meal Attendance');
-                XLSX.writeFile(wb, `meal_attendance_${currentDate}.xlsx`); [web:90][web:93]
+                XLSX.writeFile(wb, `meal_attendance_${currentDate}.xlsx`);
                 speak('Excel report downloaded successfully');
             } catch (e) {
                 console.error("Export error:", e);
@@ -558,7 +565,7 @@
             }
         }
 
-        // ---------- Voice ----------
+        // ---------- Voice Feedback ----------
         function speak(text) {
             try {
                 const utterance = new SpeechSynthesisUtterance(text);
@@ -575,10 +582,11 @@
             setTimeout(() => feedback.style.display = 'none', 3000);
         }
 
-        // ---------- Mobile Auto-switch ----------
+        // ---------- Mobile Auto-switch to Scanner ----------
         if (/Android|iPhone/i.test(navigator.userAgent)) {
             setTimeout(() => {
                 if (document.visibilityState === 'visible') {
+                    // Directly activate scanner tab without relying on event
                     document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
                     document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
                     document.getElementById('scanner-tab').classList.add('active');
